@@ -5,12 +5,11 @@ namespace PhpGpxParser\Utils;
 use PhpGpxParser\Models\TrackPoint;
 use League\Geotools\Coordinate\Coordinate;
 use League\Geotools\Distance\Distance;
+use PhpGpxParser\PhpGpxParser;
 
 class DistanceCalculator
 {
     private float $totalDistance = 0;
-    public static float $thresholdDistance = 5;
-
     /**
      * @param TrackPoint[] $points
      */
@@ -36,7 +35,7 @@ class DistanceCalculator
                 ->in('m')
                 ->haversine();
 
-            if (!is_numeric($dist) || $dist < self::$thresholdDistance) {
+            if (!is_numeric($dist) || $dist < PhpGpxParser::$thresholdDistance) {
                 continue;
             }
 

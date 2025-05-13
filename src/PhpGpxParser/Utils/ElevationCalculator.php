@@ -3,6 +3,7 @@
 namespace PhpGpxParser\Utils;
 
 use PhpGpxParser\Models\TrackPoint;
+use PhpGpxParser\PhpGpxParser;
 
 class ElevationCalculator
 {
@@ -10,8 +11,6 @@ class ElevationCalculator
     private float $loss = 0;
     private ?float $min = null;
     private ?float $max = null;
-
-    public static float $thresholdElevation = 10;
 
     /**
      * @param TrackPoint[] $points
@@ -35,10 +34,10 @@ class ElevationCalculator
             $this->max = max($this->max, $ele);
 
             $delta = $ele - $lastEle;
-            if ($delta >= self::$thresholdElevation) {
+            if ($delta >= PhpGpxParser::$thresholdElevation) {
                 $this->gain += $delta;
                 $lastEle = $ele;
-            } elseif ($delta <= -self::$thresholdElevation) {
+            } elseif ($delta <= -PhpGpxParser::$thresholdElevation) {
                 $this->loss += abs($delta);
                 $lastEle = $ele;
             }

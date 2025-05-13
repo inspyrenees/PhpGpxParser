@@ -3,6 +3,7 @@
 namespace PhpGpxParser\Tests\Unit\Utils;
 
 use PhpGpxParser\Models\TrackPoint;
+use PhpGpxParser\PhpGpxParser;
 use PhpGpxParser\Utils\ElevationCalculator;
 use PHPUnit\Framework\TestCase;
 
@@ -54,8 +55,8 @@ class ElevationCalculatorTest extends TestCase
     public function testCalculateWithThreshold(): void
     {
         // Modifier temporairement le seuil
-        $originalThreshold = ElevationCalculator::$thresholdElevation;
-        ElevationCalculator::$thresholdElevation = 20;
+        $originalThreshold = PhpGpxParser::$thresholdElevation;
+        PhpGpxParser::$thresholdElevation = 20;
 
         $points = [
             new TrackPoint(45.5, 6.5, 1000.0),
@@ -71,14 +72,14 @@ class ElevationCalculatorTest extends TestCase
         $this->assertEquals(1015.0, $this->calculator->getMax());
 
         // Restaurer le seuil
-        ElevationCalculator::$thresholdElevation = $originalThreshold;
+        PhpGpxParser::$thresholdElevation = $originalThreshold;
     }
 
     public function testCalculateGainAndLoss(): void
     {
         // Modifier temporairement le seuil
-        $originalThreshold = ElevationCalculator::$thresholdElevation;
-        ElevationCalculator::$thresholdElevation = 0; // Accepter toutes les variations
+        $originalThreshold = PhpGpxParser::$thresholdElevation;
+        PhpGpxParser::$thresholdElevation = 0; // Accepter toutes les variations
 
         $points = [
             new TrackPoint(45.5, 6.5, 1000.0),
@@ -95,6 +96,6 @@ class ElevationCalculatorTest extends TestCase
         $this->assertEquals(1200.0, $this->calculator->getMax());
 
         // Restaurer le seuil
-        ElevationCalculator::$thresholdElevation = $originalThreshold;
+        PhpGpxParser::$thresholdElevation = $originalThreshold;
     }
 }

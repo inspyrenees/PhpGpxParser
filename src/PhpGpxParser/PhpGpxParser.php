@@ -26,6 +26,20 @@ class PhpGpxParser
     private ElevationCorrector $corrector;
 
     /**
+     * Elevation threshold in meters used to filter insignificant elevation changes.
+     *
+     * @var int $thresholdElevation
+     */
+    public static int $thresholdElevation = 10;
+
+    /**
+     * Distance threshold in meters used to group nearby track points.
+     *
+     * @var int $thresholdDistance
+     */
+    public static int $thresholdDistance = 5;
+
+    /**
      * Crée une nouvelle instance du parser GPX.
      */
     public function __construct()

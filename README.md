@@ -31,7 +31,9 @@ composer require inspyrenees/phpgpxparser
 ```php
 use PhpGpxParser\PhpGpxParser;
 
-$stats = PhpGpxParser::read('/path/to/your/track.gpx')
+$phpGpxParser = new PhpGpxParser();
+$phpGpxParser
+    ->read($this->gpxFilePath)
     ->stats();
 
 echo "Total Distance: " . $stats->getTotalDistance() . " m";

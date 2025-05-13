@@ -1,6 +1,6 @@
 {
   "name": "inspyrenees/phpgpxparser",
-  "description": "Bibliothèque PHP de traitement de fichiers GPX",
+  "description": "GPX parsing and analysis toolkit in PHP, with elevation correction using the IGN API.",
   "type": "library",
   "version": "1.0.0",
   "minimum-stability": "stable",

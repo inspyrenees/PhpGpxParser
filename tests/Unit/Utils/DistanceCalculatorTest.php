@@ -3,6 +3,7 @@
 namespace PhpGpxParser\Tests\Unit\Utils;
 
 use PhpGpxParser\Models\TrackPoint;
+use PhpGpxParser\PhpGpxParser;
 use PhpGpxParser\Utils\DistanceCalculator;
 use PHPUnit\Framework\TestCase;
 
@@ -42,8 +43,8 @@ class DistanceCalculatorTest extends TestCase
     public function testCalculateWithThreshold(): void
     {
         // Temporairement modifier la valeur seuil pour le test
-        $originalThreshold = DistanceCalculator::$thresholdDistance;
-        DistanceCalculator::$thresholdDistance = 1000; // 1km
+        $originalThreshold = PhpGpxParser::$thresholdDistance;
+        PhpGpxParser::$thresholdDistance = 1000; // 1km
 
         $points = [
             new TrackPoint(45.5, 6.5),
@@ -54,14 +55,14 @@ class DistanceCalculatorTest extends TestCase
         $this->assertEquals(1357.8, $this->calculator->getTotal());
 
         // Restaurer la valeur originale
-        DistanceCalculator::$thresholdDistance = $originalThreshold;
+        PhpGpxParser::$thresholdDistance = $originalThreshold;
     }
 
     public function testShouldCalculateDistanceBetweenPoints(): void
     {
         // Définir une valeur seuil pour le test
-        $originalThreshold = DistanceCalculator::$thresholdDistance;
-        DistanceCalculator::$thresholdDistance = 0; // Accepter toutes les distances
+        $originalThreshold = PhpGpxParser::$thresholdDistance;
+        PhpGpxParser::$thresholdDistance = 0; // Accepter toutes les distances
 
         $points = [
             new TrackPoint(45.0, 6.0),
@@ -74,14 +75,14 @@ class DistanceCalculatorTest extends TestCase
         $this->assertLessThan(12000, $this->calculator->getTotal());
 
         // Restaurer la valeur originale
-        DistanceCalculator::$thresholdDistance = $originalThreshold;
+        PhpGpxParser::$thresholdDistance = $originalThreshold;
     }
 
     public function testShouldAccumulateDistances(): void
     {
         // Définir une valeur seuil pour le test
-        $originalThreshold = DistanceCalculator::$thresholdDistance;
-        DistanceCalculator::$thresholdDistance = 0; // Accepter toutes les distances
+        $originalThreshold = PhpGpxParser::$thresholdDistance;
+        PhpGpxParser::$thresholdDistance = 0; // Accepter toutes les distances
 
         $points = [
             new TrackPoint(45.0, 6.0),
@@ -95,6 +96,6 @@ class DistanceCalculatorTest extends TestCase
         $this->assertLessThan(20000, $this->calculator->getTotal());
 
         // Restaurer la valeur originale
-        DistanceCalculator::$thresholdDistance = $originalThreshold;
+        PhpGpxParser::$thresholdDistance = $originalThreshold;
     }
 }
