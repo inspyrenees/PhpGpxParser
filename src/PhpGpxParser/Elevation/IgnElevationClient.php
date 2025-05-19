@@ -6,7 +6,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class IgnElevationClient
 {
-    private const BASE_URL = 'https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json';
+    private const BASE_URL = 'https://data.geopf.fr/altimetrie/calcul/alti/rest/elevationLine.json';
     private const MAX_POINTS = 5000;
 
     public function __construct(
@@ -39,7 +39,9 @@ class IgnElevationClient
                 'delimiter' => '|',
                 'zonly' => 'true',
                 'measures' => 'false',
-                'indent' => 'false'
+                'indent' => 'false',
+                'profile_mode' => 'accurate',
+                'sampling' => count($chunk)
             ];
 
             $response = $this->client->request('POST', self::BASE_URL, [

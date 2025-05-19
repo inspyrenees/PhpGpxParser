@@ -2,9 +2,10 @@
   "name": "inspyrenees/phpgpxparser",
   "description": "GPX parsing and analysis toolkit in PHP, with elevation correction using the IGN API.",
   "type": "library",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "minimum-stability": "stable",
   "license": "MIT",
+  "keywords": ["ign", "gpx", "elevation", "parser"],
   "authors": [
     {
       "name": "MINET Simon",
