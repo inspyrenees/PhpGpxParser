@@ -10,6 +10,7 @@ A modular GPX parser written in PHP, designed to analyze GPS tracks and enhance 
 
 - Parse GPX files (tracks, segments, points)
 - Calculate statistics (distance, elevation gain/loss, speed, time)
+- Smooth elevation data with Savitzky-Golay filter
 - Correct elevation using the official IGN elevation API
 - Modular architecture (separate reader, writer, calculators)
 - PSR-4 autoloading (compatible with modern PHP projects)
@@ -32,8 +33,9 @@ composer require inspyrenees/phpgpxparser
 use PhpGpxParser\PhpGpxParser;
 
 $phpGpxParser = new PhpGpxParser();
-$phpGpxParser
+$stats = $phpGpxParser
     ->read($this->gpxFilePath)
+    ->smoothElevation() // Optional: apply Savitzky-Golay smoothing
     ->stats();
 
 echo "Total Distance: " . $stats->getTotalDistance() . " m";
@@ -41,7 +43,7 @@ echo "Elevation Gain: " . $stats->getElevationGain() . " m";
 echo "Average Speed: " . $stats->getAvgSpeed() . " km/h";
 ```
 
-The parser will automatically fetch accurate elevation data for each track point using IGN's open elevation service.
+You can apply a **Savitzky-Golay filter** to smooth elevation data and reduce GPS noise using the `smoothElevation()` method before computing statistics.
 
 ## 🔗 Dependencies
 
