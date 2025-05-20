@@ -7,9 +7,12 @@ use PhpGpxParser\Models\TrackPoint;
 
 class ElevationCorrector
 {
+    private readonly IgnElevationClient $ignClient;
+
     public function __construct(
-        private readonly IgnElevationClient $client,
-    ) {}
+    ) {
+        $this->ignClient = new IgnElevationClient();
+    }
 
     /**
      * Corrige les altitudes des points GPX en utilisant l'API IGN.
@@ -23,7 +26,7 @@ class ElevationCorrector
         $points = $gpx->getAllTrackPoints();
         $coords = array_map(fn(TrackPoint $pt) => [$pt->getLatitude(), $pt->getLongitude()], $points);
 
-        $data = $this->client->fetchElevations($coords);
+        $data = $this->ignClient->fetchElevations($coords);
 
         foreach ($points as $i => $pt) {
             $raw = $data[$i] ?? null;
