@@ -3,21 +3,16 @@
 namespace PhpGpxParser;
 
 use PhpGpxParser\Elevation\ElevationCorrector;
-use PhpGpxParser\Elevation\IgnElevationClient;
 use PhpGpxParser\Exception\GpxParserException;
-use PhpGpxParser\Http\SymfonyHttpAdapter;
 use PhpGpxParser\Models\GpxFile;
 use PhpGpxParser\Parser\PointParser;
 use PhpGpxParser\Parser\SegmentParser;
 use PhpGpxParser\Parser\TrackParser;
 use PhpGpxParser\Parser\GpxReader;
 use PhpGpxParser\Utils\GpxStatistics;
+use PhpGpxParser\Utils\GpxSmoother;
 use PhpGpxParser\Writer\GpxWriter;
 
-/**
- * Point d'entrée principal de la bibliothèque PhpGpxParser.
- * Cette classe permet d'analyser des fichiers GPX de manière autonome.
- */
 class PhpGpxParser
 {
     private ?GpxFile $gpx = null;
@@ -53,10 +48,7 @@ class PhpGpxParser
         $this->reader = new GpxReader($trackParser);
         $this->writer = new GpxWriter();
 
-        // Initialisation du client HTTP Symfony et du correcteur d'élévation
-        $httpClient = new SymfonyHttpAdapter();
-        $ignClient = new IgnElevationClient($httpClient);
-        $this->corrector = new ElevationCorrector($ignClient);
+        $this->corrector = new ElevationCorrector();
     }
 
     /**
@@ -86,6 +78,42 @@ class PhpGpxParser
             $this->writer->write($this->gpx, $inputPath);
         }
 
+        return $this;
+    }
+
+    /**
+     * Applique le filtre Savitzky-Golay pour lisser les données d'élévation.
+     *
+     * @param int $windowSize Taille de la fenêtre (doit être impair)
+     * @param int $polyOrder Ordre du polynôme (généralement 2 ou 3)
+     * @return self
+     * @throws GpxParserException Si aucun fichier GPX n'a été chargé
+     */
+    public function smoothElevation(int $windowSize = 9, int $polyOrder = 2): self
+    {
+        if ($this->gpx === null) {
+            throw new GpxParserException("Aucun fichier GPX n'a été chargé. Appelez read() d'abord.");
+        }
+
+        $this->gpx = GpxSmoother::smoothElevation($this->gpx, $windowSize, $polyOrder);
+        return $this;
+    }
+
+    /**
+     * Applique le filtre Savitzky-Golay pour lisser les coordonnées du tracé.
+     *
+     * @param int $windowSize Taille de la fenêtre (doit être impair)
+     * @param int $polyOrder Ordre du polynôme (généralement 2 ou 3)
+     * @return self
+     * @throws GpxParserException Si aucun fichier GPX n'a été chargé
+     */
+    public function smoothTrack(int $windowSize = 9, int $polyOrder = 2): self
+    {
+        if ($this->gpx === null) {
+            throw new GpxParserException("Aucun fichier GPX n'a été chargé. Appelez read() d'abord.");
+        }
+
+        $this->gpx = GpxSmoother::smoothTrack($this->gpx, $windowSize, $polyOrder);
         return $this;
     }
 
