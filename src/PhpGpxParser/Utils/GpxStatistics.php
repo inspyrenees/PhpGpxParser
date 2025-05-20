@@ -81,17 +81,27 @@ class GpxStatistics
 
     public function getStartTime(): ?\DateTimeInterface
     {
-        return $this->time->getStart();
+        return $this->time->getStartTime();
     }
 
     public function getEndTime(): ?\DateTimeInterface
     {
-        return $this->time->getEnd();
+        return $this->time->getEndTime();
     }
 
     public function getDuration(): int
     {
         return $this->time->getDuration();
+    }
+
+    public function getMovingTime(): int
+    {
+        return $this->time->getMovingTime();
+    }
+
+    public function getStoppedTime(): int
+    {
+        return $this->time->getStoppedTime();
     }
 
     public function getStartLat(): float
