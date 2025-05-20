@@ -5,9 +5,6 @@ namespace PhpGpxParser\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 use PhpGpxParser\PhpGpxParser;
 use PhpGpxParser\Models\GpxFile;
-use PhpGpxParser\Models\Track;
-use PhpGpxParser\Models\Segment;
-use PhpGpxParser\Models\TrackPoint;
 use PhpGpxParser\Utils\GpxStatistics;
 use PhpGpxParser\Exception\GpxParserException;
 
@@ -104,12 +101,6 @@ XML;
             $this->markTestSkipped('Test skipped due to IGN API issues: ' . $e->getMessage());
         }
     }
-
-    //@TODO
-    /*public function testSave(): void
-    {
-
-    }*/
 
     public function testSaveWithoutRead(): void
     {

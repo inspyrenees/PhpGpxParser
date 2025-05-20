@@ -16,9 +16,19 @@ class TrackPoint
         return $this->latitude;
     }
 
+    public function setLatitude(float $latitude): void
+    {
+        $this->latitude = $latitude;
+    }
+
     public function getLongitude(): float
     {
         return $this->longitude;
+    }
+
+    public function setLongitude(float $longitude): void
+    {
+        $this->longitude = $longitude;
     }
 
     public function getElevation(): ?float
@@ -26,13 +36,7 @@ class TrackPoint
         return $this->elevation;
     }
 
-    /**
-     * Modifie l'élévation du point
-     *
-     * @param float|null $elevation Nouvelle élévation
-     * @return void
-     */
-    public function setElevation(?float $elevation): void
+    public function setElevation(float $elevation): void
     {
         $this->elevation = $elevation;
     }
