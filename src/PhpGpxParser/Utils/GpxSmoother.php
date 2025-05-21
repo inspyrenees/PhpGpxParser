@@ -15,7 +15,7 @@ class GpxSmoother
      * @param int $polyOrder L'ordre du polynôme (généralement 2 ou 3)
      * @return GpxFile Le fichier GPX avec les données lissées
      */
-    public static function smoothElevation(GpxFile $gpx, int $windowSize = 9, int $polyOrder = 2): GpxFile
+    public static function smoothElevation(GpxFile $gpx, int $windowSize = 11, int $polyOrder = 2): GpxFile
     {
         foreach ($gpx->getTracks() as $track) {
             foreach ($track->getSegments() as $segment) {
@@ -53,7 +53,7 @@ class GpxSmoother
      * @param int $polyOrder L'ordre du polynôme (généralement 2 ou 3)
      * @return GpxFile Le fichier GPX avec les données lissées
      */
-    public static function smoothTrack(GpxFile $gpx, int $windowSize = 9, int $polyOrder = 2): GpxFile
+    public static function smoothTrack(GpxFile $gpx, int $windowSize = 7, int $polyOrder = 3): GpxFile
     {
         foreach ($gpx->getTracks() as $track) {
             foreach ($track->getSegments() as $segment) {
