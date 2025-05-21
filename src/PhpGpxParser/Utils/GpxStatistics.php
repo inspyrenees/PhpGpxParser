@@ -6,20 +6,17 @@ class GpxStatistics
 {
     private ElevationCalculator $elevation;
     private DistanceCalculator  $distance;
-    private SpeedCalculator     $speed;
     private TimeCalculator      $time;
     private CoordinateCalculator $coordinate;
 
     public function __construct(
         ElevationCalculator  $elevation,
         DistanceCalculator   $distance,
-        SpeedCalculator      $speed,
         TimeCalculator       $time,
         CoordinateCalculator $coordinate
     ) {
         $this->elevation  = $elevation;
         $this->distance   = $distance;
-        $this->speed      = $speed;
         $this->time       = $time;
         $this->coordinate = $coordinate;
     }
@@ -32,16 +29,13 @@ class GpxStatistics
         $d = new DistanceCalculator();
         $d->calculate($points);
 
-        $s = new SpeedCalculator();
-        $s->calculate($points);
-
         $t = new TimeCalculator();
         $t->calculate($points);
 
         $c = new CoordinateCalculator();
         $c->calculate($points);
 
-        return new self($e, $d, $s, $t, $c);
+        return new self($e, $d, $t, $c);
     }
 
     public function getElevationGain(): float
@@ -67,16 +61,6 @@ class GpxStatistics
     public function getTotalDistance(): float
     {
         return $this->distance->getTotal();
-    }
-
-    public function getAvgSpeed(): float
-    {
-        return $this->speed->getAvg();
-    }
-
-    public function getMaxSpeed(): float
-    {
-        return $this->speed->getMax();
     }
 
     public function getStartTime(): ?\DateTimeInterface
