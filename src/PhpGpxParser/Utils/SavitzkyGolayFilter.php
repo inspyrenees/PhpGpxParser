@@ -5,7 +5,7 @@ namespace PhpGpxParser\Utils;
 class SavitzkyGolayFilter
 {
     /**
-     * Applique un filtre Savitzky-Golay à un array de valeurs.
+     * Applique un filtre Savitzky-Golay avec gestion améliorée des bords par réflexion.
      *
      * @param array $data Les données à filtrer
      * @param int $windowSize La taille de la fenêtre (doit être impair)
@@ -32,28 +32,34 @@ class SavitzkyGolayFilter
 
         // Calculer les coefficients Savitzky-Golay
         $coeffs = self::calculateCoefficients($windowSize, $polyOrder);
-
-        // Appliquer le filtre
         $halfWindow = intdiv($windowSize, 2);
-        $result = [];
 
-        // Gérer les bords (début)
-        for ($i = 0; $i < $halfWindow; $i++) {
-            $result[] = $data[$i];
+        // Créer une série de données étendue avec réflexion aux bords
+        $extendedData = [];
+
+        // Réflexion au début - miroir des premiers points
+        for ($i = $halfWindow - 1; $i >= 0; $i--) {
+            $extendedData[] = $data[$i];
         }
 
-        // Appliquer le filtre au centre
-        for ($i = $halfWindow; $i < $n - $halfWindow; $i++) {
+        // Données originales
+        foreach ($data as $value) {
+            $extendedData[] = $value;
+        }
+
+        // Réflexion à la fin - miroir des derniers points
+        for ($i = $n - 2; $i >= $n - $halfWindow - 1; $i--) {
+            $extendedData[] = $data[$i];
+        }
+
+        // Appliquer le filtre sur les données étendues
+        $result = [];
+        for ($i = $halfWindow; $i < $n + $halfWindow; $i++) {
             $sum = 0;
             for ($j = -$halfWindow; $j <= $halfWindow; $j++) {
-                $sum += $coeffs[$j + $halfWindow] * $data[$i + $j];
+                $sum += $coeffs[$j + $halfWindow] * $extendedData[$i + $j];
             }
             $result[] = $sum;
-        }
-
-        // Gérer les bords (fin)
-        for ($i = $n - $halfWindow; $i < $n; $i++) {
-            $result[] = $data[$i];
         }
 
         return $result;
