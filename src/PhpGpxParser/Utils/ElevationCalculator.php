@@ -36,11 +36,11 @@ class ElevationCalculator
             $delta = $ele - $lastEle;
             if ($delta >= PhpGpxParser::$thresholdElevation) {
                 $this->gain += $delta;
-                $lastEle = $ele;
             } elseif ($delta <= -PhpGpxParser::$thresholdElevation) {
                 $this->loss += abs($delta);
-                $lastEle = $ele;
             }
+
+            $lastEle = $ele;
         }
     }
 

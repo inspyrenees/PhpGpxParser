@@ -2,6 +2,8 @@
 
 namespace PhpGpxParser\Models;
 
+use Generator;
+
 class GpxFile
 {
     /** @var Track[] */
