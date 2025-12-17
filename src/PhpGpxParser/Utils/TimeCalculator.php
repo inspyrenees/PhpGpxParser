@@ -2,10 +2,10 @@
 
 namespace PhpGpxParser\Utils;
 
+use Location\Coordinate;
+use Location\Distance\Vincenty;
 use PhpGpxParser\Models\TrackPoint;
 use DateTimeInterface;
-use League\Geotools\Coordinate\Coordinate;
-use League\Geotools\Distance\Distance;
 
 class TimeCalculator
 {
@@ -30,7 +30,6 @@ class TimeCalculator
             return;
         }
 
-        // Determine start and end times
         $first = reset($points);
         $last = end($points);
 
@@ -59,7 +58,6 @@ class TimeCalculator
         array $points,
         float $speedThreshold
     ): void {
-        // Réinitialiser les compteurs
         $this->movingTime = 0;
         $this->stoppedTime = 0;
 
@@ -68,14 +66,10 @@ class TimeCalculator
             return;
         }
 
-        $distance = new Distance();
-
-        // Pour le premier point, nous n'avons pas de segment précédent, donc on l'ignore
         $lastPt = $points[0];
-        $lastCoord = new Coordinate([$lastPt->getLatitude(), $lastPt->getLongitude()]);
+        $lastCoord = new Coordinate($lastPt->getLatitude(), $lastPt->getLongitude());
         $lastTime = $lastPt->getTime();
 
-        // Parcourir tous les points sauf le premier
         for ($i = 1; $i < count($points); $i++) {
             $point = $points[$i];
 
@@ -83,20 +77,14 @@ class TimeCalculator
                 continue;
             }
 
-            $coord = new Coordinate([$point->getLatitude(), $point->getLongitude()]);
-            $dist = $distance
-                ->setFrom($lastCoord)
-                ->setTo($coord)
-                ->in('m')
-                ->haversine();
+            $coord = new Coordinate($point->getLatitude(), $point->getLongitude());
+            $dist = $lastCoord->getDistance($coord, new Vincenty());
 
             $deltaTime = $point->getTime()->getTimestamp() - $lastTime->getTimestamp();
 
             if ($deltaTime > 0) {
-                // On calcule la vitesse uniquement si le segment a une durée positive
                 $speed = $this->calculateSpeed($dist, $deltaTime);
 
-                // On considère qu'on est en mouvement si la vitesse est supérieure au seuil
                 if ($speed > $speedThreshold) {
                     $this->movingTime += $deltaTime;
                 } else {
@@ -104,15 +92,12 @@ class TimeCalculator
                 }
             }
 
-            // Mettre à jour les dernières valeurs pour le prochain segment
             $lastCoord = $coord;
             $lastTime = $point->getTime();
         }
 
-        // Vérification finale : s'assurer que movingTime + stoppedTime = duration
         $calculatedTotal = $this->movingTime + $this->stoppedTime;
         if ($calculatedTotal != $this->duration) {
-            // Ajuster le temps de mouvement pour qu'il corresponde à la durée totale
             $this->movingTime += ($this->duration - $calculatedTotal);
         }
     }

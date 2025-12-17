@@ -2,62 +2,238 @@
 
 namespace PhpGpxParser\Utils;
 
+use MathPHP\Exception\MatrixException;
+use MathPHP\LinearAlgebra\MatrixFactory;
+
 class SavitzkyGolayFilter
 {
     /**
+     * Cache des coefficients calculés pour éviter les recalculs
+     *
+     * @var array<string, array<float>>
+     */
+    private static array $coefficientsCache = [];
+
+    /**
+     * Nombre maximum d'entrées dans le cache
+     */
+    private const MAX_CACHE_SIZE = 50;
+
+    /**
      * Applique un filtre Savitzky-Golay avec gestion améliorée des bords par réflexion.
      *
-     * @param array $data Les données à filtrer
-     * @param int $windowSize La taille de la fenêtre (doit être impair)
-     * @param int $polyOrder L'ordre du polynôme (généralement 2 ou 3)
-     * @return array Les données filtrées
+     * @param array<float> $data Les données à filtrer
+     * @param int $windowSize La taille de la fenêtre (doit être impair et >= 3)
+     * @param int $polyOrder L'ordre du polynôme (généralement 2 ou 3, doit être < windowSize)
+     * @param string $mode Mode de gestion des bords: 'reflect' (par défaut), 'nearest', 'wrap'
+     * @return array<float> Les données filtrées
      * @throws \InvalidArgumentException Si les paramètres ne sont pas valides
      */
-    public static function filter(array $data, int $windowSize = 9, int $polyOrder = 2): array
-    {
-        // Vérification des paramètres
-        if ($windowSize % 2 === 0) {
-            throw new \InvalidArgumentException("La taille de la fenêtre doit être impaire");
-        }
-
-        if ($polyOrder >= $windowSize) {
-            throw new \InvalidArgumentException("L'ordre du polynôme doit être inférieur à la taille de la fenêtre");
-        }
+    public static function filter(
+        array $data,
+        int $windowSize = 9,
+        int $polyOrder = 2,
+        string $mode = 'reflect'
+    ): array {
+        self::validateParameters($data, $windowSize, $polyOrder);
 
         $n = count($data);
+
         if ($n < $windowSize) {
-            // Si nous avons trop peu de points, retourner les données originales
             return $data;
         }
 
-        // Calculer les coefficients Savitzky-Golay
-        $coeffs = self::calculateCoefficients($windowSize, $polyOrder);
+        $coeffs = self::getCoefficients($windowSize, $polyOrder);
+        $halfWindow = intdiv($windowSize, 2);
+        $extendedData = self::extendData($data, $halfWindow, $mode);
+
+        return self::applyConvolution($extendedData, $coeffs, $halfWindow, $n);
+    }
+
+    /**
+     * Valide les paramètres d'entrée
+     *
+     * @throws \InvalidArgumentException
+     */
+    private static function validateParameters(array $data, int $windowSize, int $polyOrder): void
+    {
+        if (empty($data)) {
+            throw new \InvalidArgumentException("Le tableau de données ne peut pas être vide");
+        }
+
+        if ($windowSize < 3) {
+            throw new \InvalidArgumentException(
+                "La taille de la fenêtre doit être au minimum 3 (reçu: $windowSize)"
+            );
+        }
+
+        if ($windowSize % 2 === 0) {
+            throw new \InvalidArgumentException(
+                "La taille de la fenêtre doit être impaire (reçu: $windowSize)"
+            );
+        }
+
+        if ($polyOrder < 1) {
+            throw new \InvalidArgumentException(
+                "L'ordre du polynôme doit être au minimum 1 (reçu: $polyOrder)"
+            );
+        }
+
+        if ($polyOrder >= $windowSize) {
+            throw new \InvalidArgumentException(
+                "L'ordre du polynôme ($polyOrder) doit être inférieur à la taille de la fenêtre ($windowSize)"
+            );
+        }
+
+        foreach ($data as $i => $value) {
+            if (!is_numeric($value)) {
+                throw new \InvalidArgumentException(
+                    "Toutes les valeurs doivent être numériques (position $i: " . gettype($value) . ")"
+                );
+            }
+        }
+    }
+
+    /**
+     * Récupère les coefficients depuis le cache ou les calcule
+     *
+     * @return array<float>
+     */
+    private static function getCoefficients(int $windowSize, int $polyOrder): array
+    {
+        $cacheKey = "{$windowSize}_{$polyOrder}";
+
+        if (!isset(self::$coefficientsCache[$cacheKey])) {
+            if (count(self::$coefficientsCache) >= self::MAX_CACHE_SIZE) {
+                array_shift(self::$coefficientsCache);
+            }
+
+            self::$coefficientsCache[$cacheKey] = self::calculateCoefficients($windowSize, $polyOrder);
+        }
+
+        return self::$coefficientsCache[$cacheKey];
+    }
+
+    /**
+     * Calcule les coefficients du filtre Savitzky-Golay en utilisant MathPHP
+     *
+     * @return array<float>
+     * @throws \RuntimeException Si le calcul échoue
+     */
+    private static function calculateCoefficients(int $windowSize, int $polyOrder): array
+    {
         $halfWindow = intdiv($windowSize, 2);
 
-        // Créer une série de données étendue avec réflexion aux bords
+        try {
+            $vandermonde = [];
+            for ($i = -$halfWindow; $i <= $halfWindow; $i++) {
+                $row = [];
+                for ($j = 0; $j <= $polyOrder; $j++) {
+                    $row[] = pow($i, $j);
+                }
+                $vandermonde[] = $row;
+            }
+
+            $A = MatrixFactory::create($vandermonde);
+
+            $AT = $A->transpose();
+            $ATA = $AT->multiply($A);
+
+            $det = $ATA->det();
+            if (abs($det) < 1e-10) {
+                throw new \RuntimeException(
+                    "La matrice ATA est singulière (det=$det). " .
+                    "Essayez de réduire l'ordre du polynôme ou d'augmenter la taille de la fenêtre."
+                );
+            }
+
+            $ATAInv = $ATA->inverse();
+            $pseudoInverse = $ATAInv->multiply($AT);
+
+            $coefficients = [];
+            for ($i = 0; $i < $windowSize; $i++) {
+                $coefficients[] = $pseudoInverse->get(0, $i);
+            }
+
+            return $coefficients;
+
+        } catch (MatrixException $e) {
+            throw new \RuntimeException(
+                "Erreur lors du calcul des coefficients Savitzky-Golay: " . $e->getMessage(),
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
+     * Étend les données aux bords selon le mode spécifié
+     *
+     * @param array<float> $data
+     * @return array<float>
+     */
+    private static function extendData(array $data, int $halfWindow, string $mode): array
+    {
+        $n = count($data);
         $extendedData = [];
 
-        // Réflexion au début - miroir des premiers points
-        for ($i = $halfWindow - 1; $i >= 0; $i--) {
-            $extendedData[] = $data[$i];
+        switch ($mode) {
+            case 'reflect':
+                for ($i = $halfWindow; $i > 0; $i--) {
+                    $extendedData[] = $data[$i];
+                }
+                $extendedData = array_merge($extendedData, $data);
+                for ($i = $n - 2; $i >= $n - $halfWindow - 1; $i--) {
+                    $extendedData[] = $data[$i];
+                }
+                break;
+
+            case 'nearest':
+                $extendedData = array_merge(
+                    array_fill(0, $halfWindow, $data[0]),
+                    $data,
+                    array_fill(0, $halfWindow, $data[$n - 1])
+                );
+                break;
+
+            case 'wrap':
+                $extendedData = array_merge(
+                    array_slice($data, -$halfWindow),
+                    $data,
+                    array_slice($data, 0, $halfWindow)
+                );
+                break;
+
+            default:
+                throw new \InvalidArgumentException(
+                    "Mode de gestion des bords invalide: '$mode'. " .
+                    "Utilisez 'reflect', 'nearest' ou 'wrap'."
+                );
         }
 
-        // Données originales
-        foreach ($data as $value) {
-            $extendedData[] = $value;
-        }
+        return $extendedData;
+    }
 
-        // Réflexion à la fin - miroir des derniers points
-        for ($i = $n - 2; $i >= $n - $halfWindow - 1; $i--) {
-            $extendedData[] = $data[$i];
-        }
-
-        // Appliquer le filtre sur les données étendues
+    /**
+     * Applique la convolution avec les coefficients
+     *
+     * @param array<float> $extendedData
+     * @param array<float> $coeffs
+     * @return array<float>
+     */
+    private static function applyConvolution(
+        array $extendedData,
+        array $coeffs,
+        int $halfWindow,
+        int $originalSize
+    ): array {
         $result = [];
-        for ($i = $halfWindow; $i < $n + $halfWindow; $i++) {
-            $sum = 0;
-            for ($j = -$halfWindow; $j <= $halfWindow; $j++) {
-                $sum += $coeffs[$j + $halfWindow] * $extendedData[$i + $j];
+        $windowSize = count($coeffs);
+
+        for ($i = $halfWindow; $i < $originalSize + $halfWindow; $i++) {
+            $sum = 0.0;
+            for ($j = 0; $j < $windowSize; $j++) {
+                $sum += $coeffs[$j] * $extendedData[$i - $halfWindow + $j];
             }
             $result[] = $sum;
         }
@@ -66,164 +242,91 @@ class SavitzkyGolayFilter
     }
 
     /**
-     * Calcule les coefficients du filtre Savitzky-Golay
-     *
-     * @param int $windowSize Taille de la fenêtre
-     * @param int $polyOrder Ordre du polynôme
-     * @return array Coefficients du filtre
+     * Vide le cache des coefficients (utile pour les tests ou pour libérer de la mémoire)
      */
-    private static function calculateCoefficients(int $windowSize, int $polyOrder): array
+    public static function clearCache(): void
     {
+        self::$coefficientsCache = [];
+    }
+
+    /**
+     * Applique le filtre avec dérivée (utile pour détecter les changements de pente)
+     *
+     * @param array<float> $data
+     * @param int $windowSize
+     * @param int $polyOrder
+     * @param int $derivative Ordre de la dérivée (1 ou 2)
+     * @param string $mode
+     * @return array<float>
+     */
+    public static function filterWithDerivative(
+        array $data,
+        int $windowSize = 9,
+        int $polyOrder = 2,
+        int $derivative = 1,
+        string $mode = 'reflect'
+    ): array {
+        self::validateParameters($data, $windowSize, $polyOrder);
+
+        if ($derivative < 1 || $derivative > 2) {
+            throw new \InvalidArgumentException(
+                "L'ordre de la dérivée doit être 1 ou 2 (reçu: $derivative)"
+            );
+        }
+
+        $n = count($data);
+        if ($n < $windowSize) {
+            return array_fill(0, $n, 0.0);
+        }
+
+        $coeffs = self::calculateDerivativeCoefficients($windowSize, $polyOrder, $derivative);
+        $halfWindow = intdiv($windowSize, 2);
+        $extendedData = self::extendData($data, $halfWindow, $mode);
+
+        return self::applyConvolution($extendedData, $coeffs, $halfWindow, $n);
+    }
+
+    /**
+     * Calcule les coefficients pour la dérivée
+     *
+     * @return array<float>
+     */
+    private static function calculateDerivativeCoefficients(
+        int $windowSize,
+        int $polyOrder,
+        int $derivative
+    ): array {
         $halfWindow = intdiv($windowSize, 2);
 
-        // Créer la matrice de Vandermonde
-        $A = [];
-        for ($i = -$halfWindow; $i <= $halfWindow; $i++) {
-            $row = [];
-            for ($j = 0; $j <= $polyOrder; $j++) {
-                $row[] = pow($i, $j);
-            }
-            $A[] = $row;
-        }
-
-        // Calculer la pseudo-inverse (A^T * A)^-1 * A^T
-        $AT = self::transpose($A);
-        $ATA = self::matrixMultiply($AT, $A);
-        $ATAInv = self::pseudoInverse($ATA);
-        $pseudoInv = self::matrixMultiply($ATAInv, $AT);
-
-        // Les coefficients sont dans la première colonne de la pseudo-inverse
-        $coeffs = [];
-        for ($i = 0; $i < $windowSize; $i++) {
-            $coeffs[] = $pseudoInv[0][$i];
-        }
-
-        return $coeffs;
-    }
-
-    /**
-     * Transpose une matrice
-     */
-    private static function transpose(array $matrix): array
-    {
-        $rows = count($matrix);
-        $cols = count($matrix[0]);
-
-        $result = [];
-        for ($j = 0; $j < $cols; $j++) {
-            $result[$j] = [];
-            for ($i = 0; $i < $rows; $i++) {
-                $result[$j][$i] = $matrix[$i][$j];
-            }
-        }
-
-        return $result;
-    }
-
-    /**
-     * Multiplie deux matrices
-     */
-    private static function matrixMultiply(array $A, array $B): array
-    {
-        $rowsA = count($A);
-        $colsA = count($A[0]);
-        $rowsB = count($B);
-        $colsB = count($B[0]);
-
-        if ($colsA !== $rowsB) {
-            throw new \InvalidArgumentException("Dimensions de matrices incompatibles pour la multiplication");
-        }
-
-        $result = [];
-        for ($i = 0; $i < $rowsA; $i++) {
-            $result[$i] = [];
-            for ($j = 0; $j < $colsB; $j++) {
-                $sum = 0;
-                for ($k = 0; $k < $colsA; $k++) {
-                    $sum += $A[$i][$k] * $B[$k][$j];
+        try {
+            $vandermonde = [];
+            for ($i = -$halfWindow; $i <= $halfWindow; $i++) {
+                $row = [];
+                for ($j = 0; $j <= $polyOrder; $j++) {
+                    $row[] = pow($i, $j);
                 }
-                $result[$i][$j] = $sum;
+                $vandermonde[] = $row;
             }
+
+            $A = MatrixFactory::create($vandermonde);
+            $AT = $A->transpose();
+            $ATA = $AT->multiply($A);
+            $ATAInv = $ATA->inverse();
+            $pseudoInverse = $ATAInv->multiply($AT);
+
+            $coefficients = [];
+            for ($i = 0; $i < $windowSize; $i++) {
+                $coefficients[] = $pseudoInverse->get($derivative, $i);
+            }
+
+            return $coefficients;
+
+        } catch (MatrixException $e) {
+            throw new \RuntimeException(
+                "Erreur lors du calcul des coefficients de dérivée: " . $e->getMessage(),
+                0,
+                $e
+            );
         }
-
-        return $result;
-    }
-
-    /**
-     * Calcule la pseudo-inverse d'une matrice carrée
-     * Note: cette implémentation est simplifiée et peut ne pas fonctionner pour des matrices mal conditionnées
-     */
-    private static function pseudoInverse(array $matrix): array
-    {
-        $n = count($matrix);
-
-        // Copier la matrice
-        $A = [];
-        for ($i = 0; $i < $n; $i++) {
-            $A[$i] = [];
-            for ($j = 0; $j < $n; $j++) {
-                $A[$i][$j] = $matrix[$i][$j];
-            }
-        }
-
-        // Créer la matrice identité
-        $I = [];
-        for ($i = 0; $i < $n; $i++) {
-            $I[$i] = [];
-            for ($j = 0; $j < $n; $j++) {
-                $I[$i][$j] = ($i === $j) ? 1.0 : 0.0;
-            }
-        }
-
-        // Élimination de Gauss-Jordan
-        for ($i = 0; $i < $n; $i++) {
-            // Trouver le pivot maximal
-            $maxVal = abs($A[$i][$i]);
-            $maxRow = $i;
-            for ($k = $i + 1; $k < $n; $k++) {
-                if (abs($A[$k][$i]) > $maxVal) {
-                    $maxVal = abs($A[$k][$i]);
-                    $maxRow = $k;
-                }
-            }
-
-            // Échanger les lignes si nécessaire
-            if ($maxRow !== $i) {
-                for ($k = 0; $k < $n; $k++) {
-                    $tmp = $A[$i][$k];
-                    $A[$i][$k] = $A[$maxRow][$k];
-                    $A[$maxRow][$k] = $tmp;
-
-                    $tmp = $I[$i][$k];
-                    $I[$i][$k] = $I[$maxRow][$k];
-                    $I[$maxRow][$k] = $tmp;
-                }
-            }
-
-            // Normaliser la ligne i
-            $pivot = $A[$i][$i];
-            if (abs($pivot) < 1e-10) {
-                // Matrice singulière, utiliser une petite valeur
-                $pivot = ($pivot < 0) ? -1e-10 : 1e-10;
-            }
-
-            for ($j = 0; $j < $n; $j++) {
-                $A[$i][$j] /= $pivot;
-                $I[$i][$j] /= $pivot;
-            }
-
-            // Éliminer les autres lignes
-            for ($j = 0; $j < $n; $j++) {
-                if ($j !== $i) {
-                    $factor = $A[$j][$i];
-                    for ($k = 0; $k < $n; $k++) {
-                        $A[$j][$k] -= $factor * $A[$i][$k];
-                        $I[$j][$k] -= $factor * $I[$i][$k];
-                    }
-                }
-            }
-        }
-
-        return $I;
     }
 }

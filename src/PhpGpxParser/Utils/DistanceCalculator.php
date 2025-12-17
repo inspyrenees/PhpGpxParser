@@ -2,9 +2,9 @@
 
 namespace PhpGpxParser\Utils;
 
+use Location\Coordinate;
+use Location\Distance\Vincenty;
 use PhpGpxParser\Models\TrackPoint;
-use League\Geotools\Coordinate\Coordinate;
-use League\Geotools\Distance\Distance;
 use PhpGpxParser\PhpGpxParser;
 
 class DistanceCalculator
@@ -19,22 +19,16 @@ class DistanceCalculator
             return;
         }
 
-        $distance = new Distance();
         $lastPt = $points[0];
-        $lastCoord = new Coordinate([$lastPt->getLatitude(), $lastPt->getLongitude()]);
+        $lastCoord = new Coordinate($lastPt->getLatitude(), $lastPt->getLongitude());
 
         foreach ($points as $pt) {
-            if ($pt->getLatitude() === $lastCoord->getLatitude() && $pt->getLongitude() === $lastCoord->getLongitude()) {
+            if ($pt->getLatitude() === $lastCoord->getLat() && $pt->getLongitude() === $lastCoord->getLng()) {
                 continue;
             }
 
-            $coord = new Coordinate([$pt->getLatitude(), $pt->getLongitude()]);
-
-            $dist = $distance
-                ->setFrom($lastCoord)
-                ->setTo($coord)
-                ->in('m')
-                ->haversine();
+            $coord = new Coordinate($pt->getLatitude(), $pt->getLongitude());
+            $dist = $lastCoord->getDistance($coord, new Vincenty());
 
             if (!is_numeric($dist) || $dist < PhpGpxParser::$thresholdDistance) {
                 continue;
