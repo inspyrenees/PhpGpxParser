@@ -20,8 +20,8 @@ class TimeCalculatorTest extends TestCase
     {
         $this->calculator->calculate([]);
 
-        $this->assertNull($this->calculator->getStart());
-        $this->assertNull($this->calculator->getEnd());
+        $this->assertNull($this->calculator->getStartTime());
+        $this->assertNull($this->calculator->getEndTime());
         $this->assertEquals(0, $this->calculator->getDuration());
     }
 
@@ -32,8 +32,8 @@ class TimeCalculatorTest extends TestCase
 
         $this->calculator->calculate([$point]);
 
-        $this->assertEquals($time, $this->calculator->getStart());
-        $this->assertEquals($time, $this->calculator->getEnd());
+        $this->assertEquals($time, $this->calculator->getStartTime());
+        $this->assertEquals($time, $this->calculator->getEndTime());
         $this->assertEquals(0, $this->calculator->getDuration());
     }
 
@@ -46,8 +46,8 @@ class TimeCalculatorTest extends TestCase
 
         $this->calculator->calculate($points);
 
-        $this->assertNull($this->calculator->getStart());
-        $this->assertNull($this->calculator->getEnd());
+        $this->assertNull($this->calculator->getStartTime());
+        $this->assertNull($this->calculator->getEndTime());
         $this->assertEquals(0, $this->calculator->getDuration());
     }
 
@@ -64,8 +64,8 @@ class TimeCalculatorTest extends TestCase
 
         $this->calculator->calculate($points);
 
-        $this->assertEquals($startTime, $this->calculator->getStart());
-        $this->assertEquals($endTime, $this->calculator->getEnd());
+        $this->assertEquals($startTime, $this->calculator->getStartTime());
+        $this->assertEquals($endTime, $this->calculator->getEndTime());
         // 1h30 = 5400 secondes
         $this->assertEquals(5400, $this->calculator->getDuration());
     }

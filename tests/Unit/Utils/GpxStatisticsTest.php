@@ -8,7 +8,6 @@ use PhpGpxParser\Utils\CoordinateCalculator;
 use PhpGpxParser\Utils\DistanceCalculator;
 use PhpGpxParser\Utils\ElevationCalculator;
 use PhpGpxParser\Utils\GpxStatistics;
-use PhpGpxParser\Utils\SpeedCalculator;
 use PhpGpxParser\Utils\TimeCalculator;
 use PHPUnit\Framework\TestCase;
 
@@ -18,11 +17,10 @@ class GpxStatisticsTest extends TestCase
     {
         $elevation = $this->createMock(ElevationCalculator::class);
         $distance = $this->createMock(DistanceCalculator::class);
-        $speed = $this->createMock(SpeedCalculator::class);
         $time = $this->createMock(TimeCalculator::class);
         $coordinate = $this->createMock(CoordinateCalculator::class);
 
-        $stats = new GpxStatistics($elevation, $distance, $speed, $time, $coordinate);
+        $stats = new GpxStatistics($elevation, $distance, $time, $coordinate);
 
         $this->assertInstanceOf(GpxStatistics::class, $stats);
     }
@@ -53,7 +51,6 @@ class GpxStatisticsTest extends TestCase
         $stats = new GpxStatistics(
             $elevation,
             $this->createMock(DistanceCalculator::class),
-            $this->createMock(SpeedCalculator::class),
             $this->createMock(TimeCalculator::class),
             $this->createMock(CoordinateCalculator::class)
         );
@@ -72,30 +69,11 @@ class GpxStatisticsTest extends TestCase
         $stats = new GpxStatistics(
             $this->createMock(ElevationCalculator::class),
             $distance,
-            $this->createMock(SpeedCalculator::class),
             $this->createMock(TimeCalculator::class),
             $this->createMock(CoordinateCalculator::class)
         );
 
         $this->assertEquals(15000.0, $stats->getTotalDistance());
-    }
-
-    public function testSpeedMethods(): void
-    {
-        $speed = $this->createMock(SpeedCalculator::class);
-        $speed->method('getAvg')->willReturn(12.5);
-        $speed->method('getMax')->willReturn(20.3);
-
-        $stats = new GpxStatistics(
-            $this->createMock(ElevationCalculator::class),
-            $this->createMock(DistanceCalculator::class),
-            $speed,
-            $this->createMock(TimeCalculator::class),
-            $this->createMock(CoordinateCalculator::class)
-        );
-
-        $this->assertEquals(12.5, $stats->getAvgSpeed());
-        $this->assertEquals(20.3, $stats->getMaxSpeed());
     }
 
     public function testTimeMethods(): void
@@ -104,14 +82,13 @@ class GpxStatisticsTest extends TestCase
         $endTime = new DateTimeImmutable('2023-01-01 14:30:00');
 
         $time = $this->createMock(TimeCalculator::class);
-        $time->method('getStart')->willReturn($startTime);
-        $time->method('getEnd')->willReturn($endTime);
+        $time->method('getStartTime')->willReturn($startTime);
+        $time->method('getEndTime')->willReturn($endTime);
         $time->method('getDuration')->willReturn(9000); // 2h30 = 9000 secondes
 
         $stats = new GpxStatistics(
             $this->createMock(ElevationCalculator::class),
             $this->createMock(DistanceCalculator::class),
-            $this->createMock(SpeedCalculator::class),
             $time,
             $this->createMock(CoordinateCalculator::class)
         );
@@ -134,7 +111,6 @@ class GpxStatisticsTest extends TestCase
         $stats = new GpxStatistics(
             $this->createMock(ElevationCalculator::class),
             $this->createMock(DistanceCalculator::class),
-            $this->createMock(SpeedCalculator::class),
             $this->createMock(TimeCalculator::class),
             $coordinate
         );
