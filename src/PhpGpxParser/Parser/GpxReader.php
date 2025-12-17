@@ -45,7 +45,6 @@ class GpxReader
     {
         $xml = simplexml_load_string($xmlContent);
         if ($xml === false) {
-            dd($xml);
             throw new GpxParserException("Format XML invalide");
         }
 

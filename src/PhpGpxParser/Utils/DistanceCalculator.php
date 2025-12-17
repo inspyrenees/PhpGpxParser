@@ -29,6 +29,7 @@ class DistanceCalculator
             }
 
             $coord = new Coordinate([$pt->getLatitude(), $pt->getLongitude()]);
+
             $dist = $distance
                 ->setFrom($lastCoord)
                 ->setTo($coord)
